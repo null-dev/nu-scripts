@@ -4,17 +4,9 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:api.github.com)",
-      "Bash(molecule test)",
-      "Bash(molecule converge)",
-      "Bash(molecule verify)",
-      "Bash(mise run molecule-test)",
-      "Bash(mise run otel-lint)",
-      "Bash(mise tasks)",
-      "Bash(mise run test)"
+      "Bash(dev-sandbox-nu.sh *)"
     ]
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "github"
-  ]
+  "enabledMcpjsonServers": ["github"]
 }
