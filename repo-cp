@@ -1,0 +1,59 @@
+#!/usr/bin/env nu
+
+# Copy a directory recursively, skipping all gitignored files.
+#
+# Uses `git ls-files` to enumerate files that are either tracked or untracked
+# but not ignored. Falls back to a plain recursive copy if the source directory
+# is not inside a git repository.
+#
+# Examples:
+#   repo-cp ./my-project ~/backup/my-project
+#   repo-cp --dry-run ./my-project ~/backup/my-project
+def main [
+    src: path       # Source directory to copy from
+    dst: path       # Destination directory to copy to
+    --dry-run (-n)  # Print files that would be copied without actually copying
+] {
+    let src = ($src | path expand)
+    let dst = ($dst | path expand)
+
+    if not ($src | path exists) {
+        error make { msg: $"Source directory does not exist: ($src)" }
+    }
+
+    let is_git_repo = (git -C $src rev-parse --git-dir | complete).exit_code == 0
+
+    let files = if $is_git_repo {
+        git -C $src ls-files --cached --others --exclude-standard
+            | lines
+            | where { |it| ($it | str trim | is-not-empty) }
+    } else {
+        print $"Warning: ($src) is not a git repository — copying all files"
+        glob ($src | path join "**" "*") --no-dir
+            | each { |f| $f | path relative-to $src }
+    }
+
+    if $dry_run {
+        return ($files | each { |f| $src | path join $f })
+    }
+
+    mkdir $dst
+
+    for f in $files {
+        let src_file = ($src | path join $f)
+        let dst_file = ($dst | path join $f)
+        mkdir ($dst_file | path dirname)
+        cp $src_file $dst_file
+    }
+
+    # Preserve VCS metadata folders from the repo root
+    for vcs_dir in [".git", ".jj"] {
+        let src_vcs = ($src | path join $vcs_dir)
+        if ($src_vcs | path exists) {
+            cp --recursive $src_vcs ($dst | path join $vcs_dir)
+        }
+    }
+
+    let count = ($files | length)
+    print $"Copied ($count) files to ($dst)"
+}
